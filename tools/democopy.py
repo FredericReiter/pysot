@@ -19,6 +19,8 @@ from pysot.core.config import cfg
 from pysot.models.model_builder import ModelBuilder
 from pysot.tracker.tracker_builder import build_tracker
 
+from trackingmultiple import *
+
 torch.set_num_threads(1)
 
 parser = argparse.ArgumentParser(description='tracking demo')
@@ -27,7 +29,6 @@ parser.add_argument('--snapshot', type=str, help='model name')
 parser.add_argument('--video_name', default='', type=str,
                     help='videos or image files')
 args = parser.parse_args()
-
 
 def get_frames(video_name):
     if not video_name:
@@ -43,7 +44,7 @@ def get_frames(video_name):
                 break
     elif video_name.endswith('avi') or \
         video_name.endswith('mp4'):
-        cap = cv2.VideoCapture(args.video_name)
+        cap = cv2.VideoCapture(video_name)
         while True:
             ret, frame = cap.read()
             if ret:
@@ -58,8 +59,24 @@ def get_frames(video_name):
             frame = cv2.imread(img)
             yield frame
 
+def controlloop():
+    #for videoname, signal in videofilelist:
+    startframe, stopframe, video_name =  ct.initialize(0)
+    postitionlist = ct.get_start_position()
+    outputlist = []
+    for position in postitionlist:
+        position = (position.xmin, position.ymin, position.xmax-position.xmin, position.ymax-position.ymin)
+        outputlist.append(main(startframe, stopframe, video_name, position))
+    with open("D:/Users/Frederic/DokumenteDokumente/INAVET/Versuch/boxes/versuch.txt", "w+") as boxesfile:
+        outputstring = ''
+        rows = len(outputlist[0])
+        for i in range(0, rows):
+            for positionlist in outputlist:
+                outputstring += ','.join(positionlist[i]) + '-'
+            outputstring += '\n'
+        boxesfile.write(outputstring)
 
-def main():
+def main(startframe, stopframe, video_name, startposition):
     # load config
     cfg.merge_from_file(args.config)
     cfg.CUDA = torch.cuda.is_available()
@@ -70,23 +87,28 @@ def main():
 
     # load model
     model.load_state_dict(torch.load(args.snapshot,
-        map_location=lambda storage, loc: storage.cpu()))
+                                     map_location=lambda storage, loc: storage.cpu()))
     model.eval().to(device)
 
     # build tracker
     tracker = build_tracker(model)
 
     first_frame = True
-    if args.video_name:
+
+    """ if args.video_name:
         video_name = args.video_name.split('/')[-1].split('.')[0]
     else:
         video_name = 'webcam'
-    cv2.namedWindow(video_name, cv2.WND_PROP_FULLSCREEN)
+    cv2.namedWindow(video_name, cv2.WND_PROP_FULLSCREEN) """
 
-    for frame in get_frames(args.video_name):
+    output = []
+    #for frame in get_frames(args.video_name):
+    f = startframe
+    while f < startframe + 20: #stopframe:
+        frame = ct.get_frame_from_index(f)
         if first_frame:
             try:
-                init_rect = cv2.selectROI(video_name, frame, False, False)
+                init_rect = startposition # cv2.selectROI(video_name, frame, False, False)
             except:
                 exit()
             tracker.init(frame, init_rect)
@@ -105,10 +127,16 @@ def main():
                 bbox = list(map(int, outputs['bbox']))
                 cv2.rectangle(frame, (bbox[0], bbox[1]),
                               (bbox[0]+bbox[2], bbox[1]+bbox[3]),
-                              (0, 255, 0), 3)
+                              (0, 255, 0), 1)
+                bboxi = [bbox[0], bbox[1], bbox[0]+bbox[2], bbox[1]+bbox[3]]
+                bboxi = [str(x) for x in bboxi]
+                output.append(bboxi)
             cv2.imshow(video_name, frame)
             cv2.waitKey(40)
+        f += 1
+    return output
 
 
 if __name__ == '__main__':
-    main()
+    ct = Controltool()
+    controlloop()
