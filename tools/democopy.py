@@ -20,6 +20,7 @@ from pysot.models.model_builder import ModelBuilder
 from pysot.tracker.tracker_builder import build_tracker
 
 from trackingmultiple import *
+import time
 
 torch.set_num_threads(1)
 
@@ -62,11 +63,12 @@ def get_frames(video_name):
 def controlloop():
     #for videoname, signal in videofilelist:
     startframe, stopframe, video_name =  ct.initialize(0)
-    postitionlist = ct.get_start_position()
+    positionlist = ct.get_start_position()
     outputlist = []
-    for position in postitionlist:
-        position = (position.xmin, position.ymin, position.xmax-position.xmin, position.ymax-position.ymin)
-        outputlist.append(main(startframe, stopframe, video_name, position))
+    for index, position in enumerate(positionlist, 1):
+        startposition = (position.xmin, position.ymin, position.xmax-position.xmin, position.ymax-position.ymin)
+        position_x_y_w_h = [position.xmin, position.ymin, position.xmax, position.ymax]
+        outputlist.append(main(index, len(positionlist), startframe, stopframe, startposition, position_x_y_w_h, video_name))
     with open("D:/Users/Frederic/DokumenteDokumente/INAVET/Versuch/boxes/versuch.txt", "w+") as boxesfile:
         outputstring = ''
         rows = len(outputlist[0])
@@ -76,7 +78,7 @@ def controlloop():
             outputstring += '\n'
         boxesfile.write(outputstring)
 
-def main(startframe, stopframe, video_name, startposition):
+def main(signalindex, totalsignals, startframe, stopframe, startposition, position_x_y_w_h, video_name):
     # load config
     cfg.merge_from_file(args.config)
     cfg.CUDA = torch.cuda.is_available()
@@ -104,11 +106,14 @@ def main(startframe, stopframe, video_name, startposition):
     output = []
     #for frame in get_frames(args.video_name):
     f = startframe
-    while f < startframe + 20: #stopframe:
+    counter = 1
+    while f < stopframe: # startframe + 5: #
+        starttime = time.time()
         frame = ct.get_frame_from_index(f)
         if first_frame:
             try:
                 init_rect = startposition # cv2.selectROI(video_name, frame, False, False)
+                output.append([str(x) for x in position_x_y_w_h])
             except:
                 exit()
             tracker.init(frame, init_rect)
@@ -131,9 +136,13 @@ def main(startframe, stopframe, video_name, startposition):
                 bboxi = [bbox[0], bbox[1], bbox[0]+bbox[2], bbox[1]+bbox[3]]
                 bboxi = [str(x) for x in bboxi]
                 output.append(bboxi)
-            cv2.imshow(video_name, frame)
-            cv2.waitKey(40)
+            #cv2.imshow(video_name, frame)
+            #cv2.waitKey(40)
+        print("Signal:", signalindex, "of", totalsignals, "- Frame", counter, "of", stopframe-startframe, "calculated")
         f += 1
+        counter += 1
+    endtime = time.time()
+    print("Speed:", counter / (endtime - starttime))
     return output
 
 

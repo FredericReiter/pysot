@@ -85,7 +85,7 @@ class Controltool:
         return int(self.curvid.startframe), int(self.curvid.stopframe), os.path.basename(self.videofilelist[index])
 
 
-if __name__ == "__main__":
+""" if __name__ == "__main__":
     Instance = Controltool()
-    print(Instance.initialize())
+    print(Instance.initialize(0)) """
     
