@@ -23,6 +23,9 @@ class Frame:
         self.positions = []
 
 class Controltool:
+    '''Methods to import startlabels for tracking and getting the right
+    frame from video'''
+    # videodict stores [path_to_video] = [Frame1,Frame2,...] see Frame class
     videodict = {}
     videofilelist = []
     wd = 'D:/Inavet'
@@ -33,6 +36,7 @@ class Controltool:
         self.curvid = None
 
     def import_controldata(self):
+        '''Import all textfiles in path self.wd, they are stored in videodict in the instance of this class'''
         filelist = glob.glob(os.path.join(self.wd, '*.txt'))
         for file in filelist:
             with open(file, 'r') as trackinglistfile:
@@ -59,7 +63,7 @@ class Controltool:
 
                             #TODO multiple timeframes per videodata
 
-    def setup_video(self, videopath, startframe, positions):
+    def setup_video(self, videopath):
         try:
             self.vidcap = cv2.VideoCapture(videopath)
         except cv2.error:
@@ -74,13 +78,13 @@ class Controltool:
             return image
         else:
             raise Exception
-    
+
     def get_start_position(self):
         return self.curvid.positions # [0].get_x_y_w_h()
-    
+
     def initialize(self, index):
         self.curvid = self.videodict[self.videofilelist[index]][0]
-        self.setup_video(self.videofilelist[index], self.curvid.startframe, self.curvid.positions)
+        self.setup_video(self.videofilelist[index])
 
         return int(self.curvid.startframe), int(self.curvid.stopframe), os.path.basename(self.videofilelist[index])
 
@@ -88,4 +92,3 @@ class Controltool:
 """ if __name__ == "__main__":
     Instance = Controltool()
     print(Instance.initialize(0)) """
-    
