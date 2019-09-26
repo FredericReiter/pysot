@@ -3,6 +3,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import sys
+
+sys.path.append(r"D:\\Users\\Frederic\\DokumenteDokumente\\pysot")
+#print(sys.path)
 import os
 import argparse
 
@@ -78,6 +82,7 @@ def main():
     else:
         video_name = 'webcam'
     cv2.namedWindow(video_name, cv2.WND_PROP_FULLSCREEN)
+
     for frame in get_frames(args.video_name):
         if first_frame:
             try:
